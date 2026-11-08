@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ขอเพลง · เก๋า 90’</title>
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@600;800&family=Sarabun:wght@400;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0}
+body{background:linear-gradient(rgba(8,9,22,.74),rgba(8,9,22,.9)),url(bg.jpg) center top/cover fixed #0a0b1a;color:#f6efe2;font-family:'Sarabun',sans-serif;font-size:1.05rem;min-height:100vh;padding:1.2rem 1rem 2rem;display:flex;justify-content:center}
+main{width:100%;max-width:420px;align-self:flex-start;background:rgba(10,11,26,.6);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);padding:1rem;border-radius:14px}
+.sign{background:repeating-linear-gradient(90deg,#f3ead8 0 9px,#fffaf0 9px 13px);border:6px solid #7a4b3a;border-radius:6px;text-align:center;padding:.6rem 1rem .8rem;box-shadow:0 0 36px rgba(255,205,130,.55),0 0 0 2px #2a1710}
+.sign .name{font-family:'Kanit',sans-serif;font-weight:800;line-height:1.3;font-size:clamp(4rem,24vw,6rem);color:#14110f}
+.sign .name b{color:#e5262e;font-weight:800;margin-left:.15em}
+.neon{height:3px;margin:1.1rem 0 1.4rem;background:#2f5bff;box-shadow:0 0 12px 2px #2f5bff,0 0 26px 6px rgba(255,61,139,.45);border-radius:3px}
+h1{font-family:'Kanit',sans-serif;font-weight:600;font-size:1.5rem}
+#tbl{display:inline-block;margin:.5rem 0 0;padding:.15rem .8rem;border-radius:50px;border:1px solid #ff3d8b;color:#ff8fbd;font-weight:600}
+#tbl:empty{display:none}
+label{display:block;margin:1.1rem 0 .35rem;color:#d9d0bf;font-weight:600}
+input,textarea{width:100%;padding:.75rem 1rem;border-radius:10px;border:1px solid #2c3160;background:#12142b;color:#f6efe2;font:inherit;outline:none}
+input:focus,textarea:focus{border-color:#2f5bff;box-shadow:0 0 0 3px rgba(47,91,255,.4)}
+button{width:100%;margin-top:1.6rem;padding:.95rem;border:0;border-radius:10px;font-family:'Kanit',sans-serif;font-size:1.2rem;font-weight:600;color:#fff;background:#e5262e;box-shadow:0 0 22px rgba(229,38,46,.5)}
+button:disabled{opacity:.5}
+#msg{margin-top:1.1rem;text-align:center;min-height:1.6rem;font-weight:600;color:#ffd9a0}
+</style>
+</head>
+<body>
+<main>
+  <div class="sign"><div class="name">เก๋า<b>90’</b></div></div>
+  <div class="neon"></div>
+  <h1>ขอเพลงให้นักดนตรี</h1>
+  <div id="tbl"></div>
+  <label for="name">ชื่อของคุณ</label>
+  <input id="name" maxlength="40" autocomplete="nickname">
+  <label for="song">เพลงที่ขอ *</label>
+  <input id="song" maxlength="100">
+  <label for="message">ข้อความถึงนักดนตรี (ถ้ามี)</label>
+  <textarea id="message" rows="2" maxlength="200"></textarea>
+  <button id="go">ส่งคำขอเพลง</button>
+  <div id="msg" role="status"></div>
+</main>
+<script>
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzOkJKNcE-6Nth3y759-2DCOqTM-z2kWYPX5oPFdfFXqZo8LZy1OFMHlY5L2D69mDbQ/exec";
+const $ = id => document.getElementById(id);
+const table = (new URLSearchParams(location.search).get("table") || "").slice(0, 10);
+$("tbl").textContent = table ? "โต๊ะ " + table : "";
+try { $("name").value = localStorage.getItem("sr_name") || ""; } catch (e) {}
+
+$("go").onclick = async () => {
+  const song = $("song").value.trim(), name = $("name").value.trim();
+  if (!song) { $("msg").textContent = "กรุณาใส่ชื่อเพลง"; return; }
+  $("go").disabled = true; $("msg").textContent = "กำลังส่ง...";
+  try {
+    const q = new URLSearchParams({ action: "request", table, name, song, message: $("message").value.trim() });
+    const r = await (await fetch(SCRIPT_URL + "?" + q)).json();
+    if (r.ok) {
+      try { localStorage.setItem("sr_name", name); } catch (e) {}
+      $("msg").textContent = "ส่งแล้ว! คิวที่ " + r.position + " 🎶";
+      $("song").value = ""; $("message").value = "";
+    } else $("msg").textContent = r.error || "ส่งไม่สำเร็จ";
+  } catch (e) { $("msg").textContent = "ส่งไม่สำเร็จ ลองกดอีกครั้ง"; }
+  $("go").disabled = false;
+};
+</script>
+</body>
+</html>

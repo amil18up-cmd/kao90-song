@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>คิวเพลง</title>
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@600;800&family=Sarabun:wght@400;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0}
+body{background:linear-gradient(rgba(8,9,22,.82),rgba(8,9,22,.93)),url(bg.jpg) center top/cover fixed #0a0b1a;color:#f6efe2;font-family:'Sarabun',sans-serif;font-size:1.05rem;min-height:100vh;padding:1rem;border-top:3px solid #2f5bff;box-shadow:inset 0 6px 18px -8px #2f5bff}
+header{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem}
+h1{font-family:'Kanit',sans-serif;font-weight:800;font-size:1.5rem}
+h1 b{color:#e5262e}
+#snd{padding:.5rem 1rem;border-radius:10px;border:1px solid #2f5bff;background:none;color:#f6efe2;font:inherit;font-size:.95rem}
+#st{color:#9a93a8;font-size:.85rem;margin-bottom:.8rem;min-height:1.2rem}
+.card{background:#12142b;border:1px solid #2c3160;border-radius:12px;padding:1rem;margin-bottom:.8rem}
+.card.playing{border-color:#e5262e;box-shadow:0 0 20px rgba(229,38,46,.45)}
+.who{color:#ff8fbd;font-size:.9rem}
+.song{font-family:'Kanit',sans-serif;font-size:1.35rem;font-weight:600;margin:.2rem 0;word-break:break-word}
+.msg{color:#d9d0bf;font-style:italic;word-break:break-word}
+.btns{display:flex;gap:.5rem;margin-top:.8rem}
+.btns button{flex:1;padding:.7rem;border:0;border-radius:10px;font:inherit;font-weight:600;color:#fff}
+.go{background:#e5262e}.ok{background:#1f9d55}.no{background:#3b3f63}
+.empty{text-align:center;color:#9a93a8;padding:2rem}
+.del{width:100%;margin-top:.8rem;padding:.7rem;border:0;border-radius:10px;font:inherit;font-weight:600;color:#fff;background:#1f9d55}
+</style>
+</head>
+<body>
+<header><h1>เก๋า<b>90’</b> คิวเพลง</h1><button id="snd">🔔 เปิดเสียงเตือน</button></header>
+<div id="st"></div>
+<div id="list"></div>
+<script>
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzOkJKNcE-6Nth3y759-2DCOqTM-z2kWYPX5oPFdfFXqZo8LZy1OFMHlY5L2D69mDbQ/exec";
+const $ = id => document.getElementById(id);
+const el = (t, c, x) => { const e = document.createElement(t); if (c) e.className = c; if (x != null) e.textContent = x; return e; };
+let seen = new Set(), hidden = new Set(), lastQ = [], first = true, ctx = null;
+
+function beep() {
+  if (navigator.vibrate) navigator.vibrate(200);
+  if (!ctx) return;
+  const o = ctx.createOscillator(), g = ctx.createGain();
+  o.frequency.value = 880; o.connect(g); g.connect(ctx.destination);
+  g.gain.setValueAtTime(.3, ctx.currentTime); g.gain.exponentialRampToValueAtTime(.001, ctx.currentTime + .4);
+  o.start(); o.stop(ctx.currentTime + .4);
+}
+$("snd").onclick = () => {
+  ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
+  beep();
+  if (navigator.wakeLock) navigator.wakeLock.request("screen").catch(() => {});
+  $("snd").textContent = "🔔 เปิดอยู่";
+};
+
+async function done(id) {
+  hidden.add(id); show();
+  try {
+    const q = new URLSearchParams({ action: "status", id, value: "done" });
+    const r = await (await fetch(SCRIPT_URL + "?" + q)).json();
+    if (!r.ok) throw 0;
+  } catch (e) { hidden.delete(id); show(); alert("ลบคิวไม่สำเร็จ ลองกดอีกครั้ง"); }
+}
+function show() { render(lastQ.filter(i => !hidden.has(i.id))); }
+function render(q) {
+  const list = $("list"); list.textContent = "";
+  if (!q.length) { list.appendChild(el("div", "empty", "ยังไม่มีคำขอ รอลูกค้าสแกน QR นะ")); return; }
+  q.forEach((it, n) => {
+    const c = el("div", "card" + (n === 0 ? " playing" : ""));
+    c.appendChild(el("div", "who", "คิวที่ " + (n + 1) + " – " + (it.table ? "โต๊ะ " + it.table + " – " : "") + it.name));
+    c.appendChild(el("div", "song", it.song));
+    if (it.message) c.appendChild(el("div", "msg", "“" + it.message + "”"));
+    const d = el("button", "del", "เล่นแล้ว / ลบคิว"); d.onclick = () => done(it.id);
+    c.appendChild(d); list.appendChild(c);
+  });
+}
+async function load() {
+  try {
+    const r = await (await fetch(SCRIPT_URL)).json();
+    if (!r.ok) throw 0;
+    const fresh = r.queue.filter(i => !seen.has(i.id));
+    r.queue.forEach(i => seen.add(i.id));
+    if (!first && fresh.length) beep();
+    first = false;
+    $("st").textContent = "อัปเดตล่าสุด " + new Date().toLocaleTimeString("th-TH");
+    lastQ = r.queue; show();
+  } catch (e) { $("st").textContent = "⚠️ เชื่อมต่อไม่ได้ กำลังลองใหม่..."; }
+}
+load(); setInterval(load, 4000);
+</script>
+</body>
+</html>
